@@ -70,7 +70,7 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["<your-ip-address>/32"]
+    cidr_blocks = ["203.0.113.0/32"]  # Replace with your actual IP address
   }
 
   egress {
@@ -143,9 +143,9 @@ resource "aws_security_group" "kubernetes" {
 
 # Create Bastion Host
 resource "aws_instance" "bastion" {
-  ami                    = "<ami-id>"
+  ami                    = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = "<key-pair-name>"
+  key_name               = "my-key-pair"           # Replace with your actual key pair name
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.bastion.id]
 
@@ -158,9 +158,9 @@ resource "aws_instance" "bastion" {
 
 # Create Control Plane Node
 resource "aws_instance" "control_plane" {
-  ami                    = "<ami-id>"
+  ami                    = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type          = "t2.medium"
-  key_name               = "<key-pair-name>"
+  key_name               = "my-key-pair"           # Replace with your actual key pair name
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.kubernetes.id]
 
@@ -188,9 +188,9 @@ resource "aws_instance" "control_plane" {
 # Create Data Plane Nodes
 resource "aws_instance" "data_plane" {
   count                  = 2
-  ami                    = "<ami-id>"
+  ami                    = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type          = "t2.medium"
-  key_name               = "<key-pair-name>"
+  key_name               = "my-key-pair"           # Replace with your actual key pair name
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.kubernetes.id]
 
