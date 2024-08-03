@@ -204,3 +204,5 @@ resource "aws_instance" "data_plane" {
               kubeadm join <control-plane-private-ip>:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
               EOF
 }
+
+# comment for testing
