@@ -70,7 +70,7 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["203.0.113.0/32"]  # Replace with your actual IP address
+    cidr_blocks = ["<your-ip-address>/32"]
   }
 
   egress {
@@ -85,6 +85,7 @@ resource "aws_security_group" "bastion" {
 resource "aws_security_group" "kubernetes" {
   vpc_id = aws_vpc.main.id
 
+  # Allow SSH from bastion host
   ingress {
     from_port   = 22
     to_port     = 22
@@ -92,39 +93,44 @@ resource "aws_security_group" "kubernetes" {
     security_groups = [aws_security_group.bastion.id]
   }
 
+  # Allow Kubernetes API server communication
   ingress {
     from_port   = 6443
     to_port     = 6443
     protocol    = "tcp"
-    security_groups = [aws_security_group.kubernetes.id]
+    cidr_blocks = ["10.0.0.0/16"]  # Allow from within the VPC
   }
 
+  # Allow kubelet communication
   ingress {
     from_port   = 10250
     to_port     = 10250
     protocol    = "tcp"
-    security_groups = [aws_security_group.kubernetes.id]
+    cidr_blocks = ["10.0.0.0/16"]  # Allow from within the VPC
   }
 
+  # Allow kube-scheduler communication
   ingress {
     from_port   = 10251
     to_port     = 10251
     protocol    = "tcp"
-    security_groups = [aws_security_group.kubernetes.id]
+    cidr_blocks = ["10.0.0.0/16"]  # Allow from within the VPC
   }
 
+  # Allow kube-controller-manager communication
   ingress {
     from_port   = 10252
     to_port     = 10252
     protocol    = "tcp"
-    security_groups = [aws_security_group.kubernetes.id]
+    cidr_blocks = ["10.0.0.0/16"]  # Allow from within the VPC
   }
 
+  # Allow health checks and metrics communication
   ingress {
     from_port   = 10255
     to_port     = 10255
     protocol    = "tcp"
-    security_groups = [aws_security_group.kubernetes.id]
+    cidr_blocks = ["10.0.0.0/16"]  # Allow from within the VPC
   }
 
   egress {
@@ -204,5 +210,3 @@ resource "aws_instance" "data_plane" {
               kubeadm join <control-plane-private-ip>:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
               EOF
 }
-
-# comment for testing
