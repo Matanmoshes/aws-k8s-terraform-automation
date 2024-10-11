@@ -1,0 +1,13 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - software-properties-common
+  - git
+
+runcmd:
+  - add-apt-repository --yes --update ppa:ansible/ansible
+  - apt-get install -y ansible
+  - ansible --version
+  - git clone https://github.com/Matanmoshes/aws-k8s-terraform-automation.git /home/ubuntu/aws-k8s-terraform-automation
+  - chown -R ubuntu:ubuntu /home/ubuntu/aws-k8s-terraform-automation

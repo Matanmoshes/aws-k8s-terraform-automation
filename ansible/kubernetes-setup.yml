@@ -71,7 +71,7 @@
         state: directory
 
     - name: Generate default containerd configuration
-      command: containerd config default > /etc/containerd/config.toml
+      shell: containerd config default > /etc/containerd/config.toml
       args:
         creates: /etc/containerd/config.toml
 
@@ -116,7 +116,7 @@
       command: apt-mark hold kubelet kubeadm kubectl
 
 - name: Initialize Kubernetes Control Plane Node
-  hosts: master
+  hosts: control_plane
   become: yes
   vars:
     pod_network_cidr: '192.168.0.0/16'

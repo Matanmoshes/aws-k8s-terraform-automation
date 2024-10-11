@@ -66,5 +66,5 @@ variable "worker_count" {
 variable "key_pair_name" {
   description = "Name of the AWS key pair."
   type        = string
-  default = "11-10-24-key"
+  default = "ansible-key"
 }
