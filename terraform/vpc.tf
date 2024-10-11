@@ -13,6 +13,8 @@ resource "aws_vpc" "main" {
   }
 }
 
+#=============== Public Subnet configuretion ==================
+
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
@@ -31,17 +33,6 @@ resource "aws_subnet" "public" {
     Name = "k8s-public-subnet"
   }
 }
-
-resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidr
-  availability_zone = var.availability_zone
-
-  tags = {
-    Name = "k8s-private-subnet"
-  }
-}
-
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -59,3 +50,41 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
+
+#=============== Private Subnet configuretion ==================
+# Elastic IP for NAT Gateway
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+}
+
+# NAT Gateway
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public.id
+}
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = var.availability_zone
+
+  tags = {
+    Name = "k8s-private-subnet"
+  }
+}
+
+# Private Route Table
+resource "aws_route_table" "private_route_table" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+}
+
+resource "aws_route_table_association" "private_subnet_association" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private_route_table.id
+}
+
