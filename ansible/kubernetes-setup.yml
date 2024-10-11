@@ -156,12 +156,12 @@
         KUBECONFIG: /etc/kubernetes/admin.conf
 
 - name: Join Worker Nodes to Cluster
-  hosts: workers
+  hosts: worker_nodes
   become: yes
   tasks:
-    - name: Retrieve kubeadm join command from master
+    - name: Retrieve kubeadm join command from control_plane
       set_fact:
-        kubeadm_join_cmd: "{{ hostvars[groups['master'][0]]['kubeadm_join_cmd'] }}"
+        kubeadm_join_cmd: "{{ hostvars[groups['control_plane'][0]]['kubeadm_join_cmd'] }}"
 
     - name: Join the node to the Kubernetes cluster
       command: "{{ kubeadm_join_cmd }}"
