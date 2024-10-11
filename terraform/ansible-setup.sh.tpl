@@ -19,4 +19,4 @@ ansible --version
 sudo apt install git
 
 # clone the the github repo with the ansible configuration files
-git clone https://github.com/Matanmoshes/azure-k8s-deployment-terraform-ansible.git
+git clone https://github.com/Matanmoshes/aws-k8s-terraform-automation.git
