@@ -128,7 +128,7 @@ Before you begin, ensure you have met the following requirements:
 
 ## Setup and Deployment
 
-### 1. AWS Setup
+## 1. AWS Setup
 
 1. **Create SSH Key Pair:**
    - Log in to the AWS Management Console.
@@ -143,7 +143,9 @@ Before you begin, ensure you have met the following requirements:
    - Navigate to **DynamoDB**.
    - Create a table named `state_locking` with `LockID` as the primary key.
 
-### 2. Terraform Deployment
+---
+
+## 2. Terraform Deployment
 
 1. **Configure Terraform Backend:**
    - Update `terraform/backend.tf` with your AWS S3 bucket and DynamoDB table details.
@@ -160,7 +162,9 @@ Before you begin, ensure you have met the following requirements:
    ```
    - Review the plan and confirm to provision the resources.
 
-### 3. Ansible Configuration
+---
+
+## 3. Ansible Configuration
 
 1. **Set Up SSH Key Permissions:**
    ```bash
@@ -205,7 +209,9 @@ Before you begin, ensure you have met the following requirements:
    ```
    - You should receive a "pong" response from all hosts.
 
-### 4. Kubernetes Cluster Initialization
+---
+
+## 4. Kubernetes Cluster Initialization
 
 1. **Run the Ansible Playbook:**
    ```bash
