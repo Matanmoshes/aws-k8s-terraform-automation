@@ -1,5 +1,3 @@
-# security_groups.tf
-
 # Security Group for Bastion Host
 resource "aws_security_group" "bastion_sg" {
   name        = "bastion-sg"

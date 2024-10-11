@@ -1,5 +1,3 @@
-# instances.tf
-
 # Bastion Host
 resource "aws_instance" "bastion" {
   ami                    = var.ubuntu_ami
