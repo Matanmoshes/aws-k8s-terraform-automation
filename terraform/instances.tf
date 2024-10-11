@@ -16,7 +16,7 @@ resource "aws_instance" "bastion" {
 # Elastic IP for Bastion Host
 resource "aws_eip" "bastion_eip" {
   instance = aws_instance.bastion.id
-  vpc      = true
+  domain   = "vpc"
 
   depends_on = [aws_internet_gateway.gw]
 
@@ -32,7 +32,7 @@ resource "aws_instance" "ansible_control" {
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.private_sg.id]
   key_name               = var.key_pair_name
-  user_data = templatefile("${path.module}/ansible-setup.sh.tpl")
+  user_data = file("${path.module}/ansible-setup.sh")
 
   tags = {
     Name = "ansible-control"

@@ -61,6 +61,7 @@ variable "my_public_ip" {
 variable "ubuntu_ami" {
   description = "AMI ID for Ubuntu 22.04 LTS in the selected region."
   type        = string
+  default = "ami-005fc0f236362e99f"
 }
 
 variable "worker_count" {
