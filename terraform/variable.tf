@@ -28,11 +28,6 @@ variable "availability_zone" {
   default     = "us-east-1a"
 }
 
-variable "key_pair_name" {
-  description = "Name of the AWS key pair."
-  type        = string
-}
-
 variable "instance_type" {
   description = "EC2 instance type."
   type        = string
@@ -66,4 +61,10 @@ variable "worker_count" {
   description = "Number of worker nodes."
   type        = number
   default     = 2
+}
+
+variable "key_pair_name" {
+  description = "Name of the AWS key pair."
+  type        = string
+  default = "11-10-24-key"
 }
