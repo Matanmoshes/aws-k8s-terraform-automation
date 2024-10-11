@@ -61,7 +61,7 @@ aws-k8s-terraform-automation/
 
 Below is a high-level diagram of the AWS infrastructure and the deployment flow:
 
-```mermaid
+```SCSS
                                     Internet
                                         |
                                         |
