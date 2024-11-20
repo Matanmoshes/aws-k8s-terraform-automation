@@ -1,0 +1,10 @@
+---
+# Kubernetes and cluster settings
+kubernetes_version: '1.30.0-00'
+pod_network_cidr: '10.244.0.0/16'
+
+# AWS NLB DNS Name
+nlb_dns_name: 'k8s-api-nlb-<unique-id>.elb.<region>.amazonaws.com:6443'  # Replace with your actual NLB DNS name
+
+# User settings
+ansible_user: ubuntu  # Ensure this matches the user in your inventory

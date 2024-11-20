@@ -1,0 +1,218 @@
+---
+- name: Prepare nodes for Kubernetes installation
+  hosts: all
+  become: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Remove swap entry from /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#]*\s+swap\s+.*)$'
+        replace: '# \1'
+        backup: yes
+
+    - name: Load necessary kernel modules configuration
+      copy:
+        dest: /etc/modules-load.d/containerd.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Ensure kernel modules are loaded
+      command: modprobe {{ item }}
+      loop:
+        - overlay
+        - br_netfilter
+      ignore_errors: yes
+
+    - name: Set system configurations for Kubernetes
+      copy:
+        dest: /etc/sysctl.d/kubernetes.conf
+        content: |
+          net.bridge.bridge-nf-call-ip6tables  = 1
+          net.bridge.bridge-nf-call-iptables   = 1
+          net.ipv4.ip_forward                  = 1
+
+    - name: Apply sysctl params
+      command: sysctl --system
+
+    - name: Install containerd prerequisites
+      apt:
+        name:
+          - curl
+          - gnupg2
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - socat
+        state: present
+
+    - name: Install containerd and runc
+      apt:
+        name:
+          - containerd
+          - runc
+        state: present
+
+    - name: Create containerd configuration directory
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd configuration
+      shell: containerd config default > /etc/containerd/config.toml
+      args:
+        creates: /etc/containerd/config.toml
+
+    - name: Set SystemdCgroup to true in containerd config
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*)SystemdCgroup = false'
+        replace: '\1SystemdCgroup = true'
+
+    - name: Restart and enable containerd service
+      systemd:
+        name: containerd.service
+        state: restarted
+        enabled: yes
+
+    - name: Add Kubernetes GPG key
+      apt_key:
+        url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
+        state: present
+        keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes apt repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
+        state: present
+        filename: kubernetes
+
+    - name: Update apt cache after adding Kubernetes repo
+      apt:
+        update_cache: yes
+
+    - name: Install Kubernetes components
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        allow_downgrade: yes
+
+    - name: Hold Kubernetes packages at current version
+      command: apt-mark hold kubelet kubeadm kubectl
+
+- name: Initialize the first control-plane node
+  hosts: control-plane-1
+  become: yes
+  vars_files:
+    - vars.yml
+  vars:
+    control_plane_endpoint: "{{ nlb_dns_name }}"
+  tasks:
+    - name: Initialize Kubernetes control plane
+      command: >
+        kubeadm init
+        --control-plane-endpoint "{{ control_plane_endpoint }}"
+        --upload-certs
+        --pod-network-cidr={{ pod_network_cidr }}
+      register: kubeadm_init_output
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Extract join command for control-plane nodes
+      set_fact:
+        control_plane_join_command: "{{ kubeadm_init_output.stdout | regex_search('kubeadm join .*?--control-plane.*?\\n', multiline=True) | trim }}"
+
+    - name: Extract join command for worker nodes
+      set_fact:
+        worker_join_command: "{{ kubeadm_init_output.stdout | regex_search('kubeadm join .*?\\n', multiline=True) | trim }}"
+
+    - name: Copy kubeconfig to user's home
+      run_once: true
+      become_user: "{{ ansible_user }}"
+      command: >
+        mkdir -p /home/{{ ansible_user }}/.kube && cp /etc/kubernetes/admin.conf /home/{{ ansible_user }}/.kube/config
+
+    - name: Change ownership of kubeconfig
+      file:
+        path: /home/{{ ansible_user }}/.kube/config
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
+
+    - name: Set KUBECONFIG environment variable
+      lineinfile:
+        dest: /home/{{ ansible_user }}/.bashrc
+        line: 'export KUBECONFIG=$HOME/.kube/config'
+        state: present
+
+    - name: Source bashrc
+      shell: source /home/{{ ansible_user }}/.bashrc
+      args:
+        executable: /bin/bash
+
+- name: Deploy Flannel network add-on
+  hosts: control-plane-1
+  become: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Download Flannel manifest
+      get_url:
+        url: https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+        dest: /tmp/kube-flannel.yml
+
+    - name: Apply Flannel manifest
+      command: kubectl apply -f /tmp/kube-flannel.yml
+
+- name: Wait for Kubernetes API to be ready
+  hosts: control-plane-1
+  become: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Wait for kube-apiserver to be ready
+      command: kubectl get nodes
+      register: apiserver_status
+      retries: 10
+      delay: 15
+      until: apiserver_status.rc == 0
+
+- name: Join other control-plane nodes
+  hosts: control-plane-2,control-plane-3
+  become: yes
+  vars_files:
+    - vars.yml
+  vars:
+    control_plane_join_command: "{{ hostvars['control-plane-1']['control_plane_join_command'] }}"
+  tasks:
+    - name: Run control-plane join command
+      command: "{{ control_plane_join_command }}"
+      args:
+        chdir: /home/{{ ansible_user }}
+
+- name: Join worker nodes
+  hosts: worker_nodes
+  become: yes
+  vars_files:
+    - vars.yml
+  vars:
+    worker_join_command: "{{ hostvars['control-plane-1']['worker_join_command'] }}"
+  tasks:
+    - name: Run worker join command
+      command: "{{ worker_join_command }}"
+      args:
+        chdir: /home/{{ ansible_user }}
